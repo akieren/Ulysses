@@ -21,9 +21,9 @@ class VADDetector:
         self.channels = [1]
         self.mapping = [c - 1 for c in self.channels]
         self.device_info = sd.query_devices(None, "input")
-        self.sample_rate = 16000  # int(self.device_info['default_samplerate'])
-        self.interval_size = 10  # audio interval size in ms
-        self.sensitivity = sensitivity  # Seconds
+        self.sample_rate = 16000
+        self.interval_size = 10
+        self.sensitivity = sensitivity
         self.block_size = self.sample_rate * self.interval_size / 1000
         self.vad = webrtcvad.Vad()
         self.vad.set_mode(3)
@@ -61,7 +61,6 @@ class VADDetector:
                     self.onSpeechEnd(np.frombuffer(samp, dtype=np.int16))
                 self.voiced_frames = []
             else:
-                # if last block was not speech don't add
                 if len(self.voiced_frames) > 0:
                     self.voiced_frames.append(audio_data)
 

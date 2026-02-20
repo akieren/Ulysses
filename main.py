@@ -5,39 +5,37 @@ import time
 from queue import Queue
 
 import numpy as np
-import requests
 import sounddevice as sd
 import soundfile as sf
 from faster_whisper import WhisperModel
 
+import llm
+from memory import memory_manager
+from memory.temporary_memory import TemporaryMemory
+from skills import app_control, weather_report, web_search
 from stt.VoiceActivityDetection import VADDetector
-from wakeword import WakeWordListener
-
-master_prompt = "You are a helpful assistant designed to run offline with decent latency. Answer the following input from the user in no more than three sentences. Address them as Sir at all times. Only respond with the dialogue, nothing else"
+from wakeword.wakeword import WakeWordListener
 
 
 class Client:
     def __init__(self):
         self.listening = False
         self.is_awake = False
-        self.history = []
         self.last_interaction_time = time.time()
         self.timeout_limit = 60
+
+        self.temp_memory = TemporaryMemory()
+        self.long_term_memory = memory_manager.load_memory()
 
         self.vad = VADDetector(lambda: None, self.onSpeechEnd, sensitivity=0.3)
         self.vad_data = Queue()
         self.stt = WhisperModel("small.en", device="cpu", compute_type="int8")
-        self.last_suggested_app = None
 
-        # Mac'e geçince '.exe'yi silersin
-        self.piper_exe = os.path.join("piper", "piper.exe")
-        self.piper_model = os.path.join("piper", "en_GB-alan-medium.onnx")
+        self.piper_exe = os.path.join("tts", "piper.exe")
+        self.piper_model = os.path.join("tts", "en_GB-alan-medium.onnx")
         self.tts_output_file = "response_audio.wav"
 
-        self.lm_studio_url = "http://localhost:1234/v1/chat/completions"
-        self.headers = {"Content-Type": "application/json"}
-
-        print("System Ready.")
+        print("System Ready. Awareness initialized.")
 
         self.startListening()
         t = threading.Thread(target=self.transcription_loop)
@@ -49,7 +47,6 @@ class Client:
 
     def on_wake(self):
         if not self.is_awake:
-            print("Ulysses Ready!")
             self.is_awake = True
             self.last_interaction_time = time.time()
 
@@ -63,8 +60,7 @@ class Client:
 
     def toggleListening(self):
         if not self.listening:
-            print()
-            print("\033[33mListening...\033[0m")
+            print("\n\033[33mListening...\033[0m")
             self.last_interaction_time = time.time()
 
         while not self.vad_data.empty():
@@ -78,14 +74,11 @@ class Client:
 
     def addToHistory(self, content: str, role: str):
         if role == "user":
-            print(f"\033[97m{content}\033[0m")
+            print(f"\033[97mYou: {content}\033[0m")
         else:
-            print(f"\033[36m {content}\033[0m")
+            print(f"\033[36mUlysses: {content}\033[0m")
 
-        if role == "user":
-            content = f"""{master_prompt}\n\n{content}"""
-
-        self.history.append({"role": role, "content": content})
+        self.temp_memory.add_to_history(role, content)
 
     def check_system_commands(self, text):
         return False
@@ -96,6 +89,7 @@ class Client:
                 time.time() - self.last_interaction_time > self.timeout_limit
             ):
                 print("\n\033[90m(Timeout - Going to Standby)\033[0m")
+                self.is_awake = False
                 self.toggleListening()
                 continue
 
@@ -116,36 +110,71 @@ class Client:
                         self.addToHistory(text_output, "user")
                         self.last_interaction_time = time.time()
 
+                        print("\033[35m[SYSTEM] Thinking...\033[0m")
+
                         if self.check_system_commands(text_output):
-                            self.last_interaction_time = time.time()
                             continue
 
-                        payload = {
-                            "messages": [
-                                {"role": "system", "content": master_prompt},
-                                *self.history,
-                            ],
-                            "temperature": 0.7,
-                            "max_tokens": -1,
-                            "stream": False,
-                        }
-
                         try:
-                            response = requests.post(
-                                self.lm_studio_url, headers=self.headers, json=payload
+                            current_memory = memory_manager.load_memory()
+                            history_str = self.temp_memory.get_history_for_prompt()
+
+                            if (
+                                hasattr(self.temp_memory, "pending_intent")
+                                and self.temp_memory.pending_intent
+                            ):
+                                history_str += f"\n[CRITICAL SYSTEM NOTE: We are currently executing the '{self.temp_memory.pending_intent}' intent. The user is answering to provide the missing parameter. You MUST output the '{self.temp_memory.pending_intent}' intent and extract the parameter from the user's message.]"
+
+                            result = llm.get_llm_output(
+                                user_text=text_output,
+                                memory_block=current_memory,
+                                history=history_str,
                             )
 
-                            if response.status_code == 200:
-                                result = response.json()
-                                answer = result["choices"][0]["message"]["content"]
-                                self.addToHistory(answer, "assistant")
-                                self.speak(answer)
+                            if not result:
+                                result = {
+                                    "intent": "chat",
+                                    "text": "Sir, I encountered a cognitive error.",
+                                }
+
+                            intent = result.get("intent")
+                            parameters = result.get("parameters", {})
+                            answer = result.get(
+                                "text", "Sir, I couldn't generate a response."
+                            )
+                            memory_update = result.get("memory_update")
+
+                            if memory_update:
+                                memory_manager.update_memory(memory_update)
+                                self.long_term_memory = memory_manager.load_memory()
+
+                            self.addToHistory(answer, "assistant")
+
+                            if intent == "open_app":
+                                threading.Thread(
+                                    target=app_control.open_app,
+                                    args=(parameters, answer, self),
+                                    daemon=True,
+                                ).start()
+                            elif intent == "search":
+                                threading.Thread(
+                                    target=web_search.perform_search,
+                                    args=(parameters, answer, self),
+                                    daemon=True,
+                                ).start()
+                            elif intent == "weather_report":
+                                threading.Thread(
+                                    target=weather_report.get_weather,
+                                    args=(parameters, answer, self),
+                                    daemon=True,
+                                ).start()
                             else:
-                                print(f"LM Studio Error: {response.status_code}")
-                                self.toggleListening()
+                                self.speak(answer)
 
                         except Exception as e:
-                            print(f"Connection Error: {e}")
+                            print(
+                                f"\033[31m[ERROR] Brain Connection or Execution Error: {e}\033[0m"
+                            )
                             self.toggleListening()
                     else:
                         self.toggleListening()
@@ -187,15 +216,20 @@ class Client:
             else:
                 print("Error: Audio file not generated.")
 
+            if self.is_awake:
+                self.listening = True
+                self.last_interaction_time = time.time()
+                print("\n\033[33mListening...\033[0m")
+
         except Exception as e:
             print(f"TTS Error: {e}")
 
-        self.toggleListening()
+        if self.is_awake and not self.listening:
+            self.toggleListening()
 
 
 if __name__ == "__main__":
     jc = Client()
-
     try:
         while True:
             time.sleep(0.5)

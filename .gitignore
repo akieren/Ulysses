@@ -1,7 +1,19 @@
 __pycache__/
 *.pyc
-*.wav
+*.pyo
+*.pyd
+
+venv/
+.venv/
+env/
+
+memory/memory.json
+response_audio.wav
+*.log
+
+tts/
+wakeword/model/
+stt/faster_whisper/
 
 .vscode/
 .idea/
-

@@ -1,0 +1,32 @@
+1. STT (Speech-to-Text) Optimizasyonu
+Mevcut: faster_whisper (Small model, CPU-bound). 
+
+Hedef: openai-whisper (Large-v3 model). 
+
+
+2. TTS (Text-to-Speech) Geliştirme
+
+Mevcut: Piper TTS (Hızlı ama robotik tınılı). 
+
+Hedef: Coqui TTS veya GPT-SoVITS (Local, açık kaynak ve klonlanabilir sesler). 
+
+
+3.Wake Word
+
+Mevcut: Vosk.
+
+Hedef: Özel Eğitilmiş Model (Custom Trained Model) veya Alternatif Motorlar.
+
+
+4. LLM (Zeka) Kapasitesi
+
+Mevcut: LM Studio üzerinden orta seviye modeller. 
+
+Hedef: Ollama veya doğrudan Llama-3-70B (veya daha büyüğü). 
+
+
+5. İşletim Sistemi Entegrasyonu (Vizyon: Ulysses OS)
+
+Platform: Windows'tan Arch Linux'a geçiş. 
+
+Hedef: Ulysses'i bir uygulama olarak değil, systemd servisleri ve D-Bus üzerinden çekirdeğe bağlı bir kabuk (shell) olarak çalıştırmak.
