@@ -31,4 +31,3 @@ Platform: Transition from Windows to Arch Linux.
 
 Goal: To run Ulysses not as an application, but as a shell integrated into the kernel via systemd services and D-Bus.
 
-Translated with DeepL.com (free version)
