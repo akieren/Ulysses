@@ -1,32 +1,34 @@
-1. STT (Speech-to-Text) Optimizasyonu
-Mevcut: faster_whisper (Small model, CPU-bound). 
+1. STT (Speech-to-Text) Optimization
+Current: faster_whisper (Small model, CPU-bound). 
 
-Hedef: openai-whisper (Large-v3 model). 
-
-
-2. TTS (Text-to-Speech) Geliştirme
-
-Mevcut: Piper TTS (Hızlı ama robotik tınılı). 
-
-Hedef: Coqui TTS veya GPT-SoVITS (Local, açık kaynak ve klonlanabilir sesler). 
+Target: openai-whisper (Large-v3 model). 
 
 
-3.Wake Word
+2. TTS (Text-to-Speech) Development
 
-Mevcut: Vosk.
+Current: Piper TTS (Fast but robotic-sounding). 
 
-Hedef: Özel Eğitilmiş Model (Custom Trained Model) veya Alternatif Motorlar.
-
-
-4. LLM (Zeka) Kapasitesi
-
-Mevcut: LM Studio üzerinden orta seviye modeller. 
-
-Hedef: Ollama veya doğrudan Llama-3-70B (veya daha büyüğü). 
+Target: Coqui TTS or GPT-SoVITS (Local, open-source, and clonable voices). 
 
 
-5. İşletim Sistemi Entegrasyonu (Vizyon: Ulysses OS)
+3. Wake Word
 
-Platform: Windows'tan Arch Linux'a geçiş. 
+Current: Vosk.
 
-Hedef: Ulysses'i bir uygulama olarak değil, systemd servisleri ve D-Bus üzerinden çekirdeğe bağlı bir kabuk (shell) olarak çalıştırmak.
+Target: Custom-Trained Model or Alternative Engines.
+
+
+4. LLM (AI) Capability
+
+Current: Mid-range models via LM Studio. 
+
+Target: Ollama or directly Llama-3-70B (or larger). 
+
+
+5. Operating System Integration (Vision: Ulysses OS)
+
+Platform: Transition from Windows to Arch Linux. 
+
+Goal: To run Ulysses not as an application, but as a shell integrated into the kernel via systemd services and D-Bus.
+
+Translated with DeepL.com (free version)
